@@ -36,7 +36,7 @@ bool           m_bCreated       = false;
 ADDON_STATUS   m_CurStatus      = ADDON_STATUS_UNKNOWN;
 PVRDemoData   *m_data           = NULL;
 bool           m_bIsPlaying     = false;
-void          *m_streamHandle   = NULL;
+TimeshiftBuffer *m_tsBuffer     = NULL;
 PVRDemoChannel m_currentChannel;
 
 /* User adjustable settings are saved here.
@@ -227,8 +227,8 @@ bool OpenLiveStream(const PVR_CHANNEL &channel)
 
     if (m_data->GetChannel(channel, m_currentChannel))
     {
-      if (strlen(channel.strStreamURL) > 0)
-        m_streamHandle = new TimeshiftBuffer(channel.strStreamURL, "special://userdata/addon_data/pvr.demo");
+      if (!m_currentChannel.strStreamURL.empty())
+        m_tsBuffer = new TimeshiftBuffer(m_currentChannel.strStreamURL, "special://userdata/addon_data");
 
       m_bIsPlaying = true;
       return true;
@@ -241,9 +241,9 @@ bool OpenLiveStream(const PVR_CHANNEL &channel)
 void CloseLiveStream(void)
 {
   m_bIsPlaying = false;
-  if (m_streamHandle)
-    delete m_streamHandle;
-  m_streamHandle = NULL;
+  if (m_tsBuffer)
+    delete m_tsBuffer;
+  m_tsBuffer = NULL;
 }
 
 int GetCurrentClientChannel(void)
@@ -316,29 +316,41 @@ bool CanPauseStream(void) { return true; }
 
 int ReadLiveStream(unsigned char *pBuffer, unsigned int iBufferSize)
 {
-  if (m_streamHandle)
-    return XBMC->ReadFile(m_streamHandle, pBuffer, iBufferSize);
+  if (m_tsBuffer)
+  {
+    XBMC->Log(LOG_DEBUG, "read(buf[], %u)", iBufferSize);
+    return m_tsBuffer->ReadData(pBuffer, iBufferSize);
+  }
   return 0;
 }
 
 long long SeekLiveStream(long long iPosition, int iWhence /* = SEEK_SET */)
 {
-  if (m_streamHandle)
-    return XBMC->SeekFile(m_streamHandle, iPosition, iWhence);
+  if (m_tsBuffer)
+  {
+    XBMC->Log(LOG_DEBUG, "seek(%lld, %d)", iPosition, iWhence);
+    return m_tsBuffer->Seek(iPosition, iWhence);
+  }
   return -1;
 }
 
 long long PositionLiveStream(void)
 {
-  if (m_streamHandle)
-    return XBMC->GetFilePosition(m_streamHandle);
+  if (m_tsBuffer)
+  {
+    XBMC->Log(LOG_DEBUG, "fgetpos()");
+    return m_tsBuffer->Position();
+  }
   return -1;
 }
 
 long long LengthLiveStream(void)
 {
-  if (m_streamHandle)
-    return XBMC->GetFileLength(m_streamHandle);
+  if (m_tsBuffer)
+  {
+    XBMC->Log(LOG_DEBUG, "fstat()");
+    return m_tsBuffer->Length();
+  }
   return -1;
 }
 
