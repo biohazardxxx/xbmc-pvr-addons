@@ -15,6 +15,7 @@ LIBS            = @abs_top_srcdir@/lib/tinyxml/libtinyxml.la
 include ../Makefile.include.am
 
 libpvrdemo_addon_la_SOURCES = src/client.cpp \
+                              src/TimeshiftBuffer.cpp \
                               src/PVRDemoData.cpp
 libpvrdemo_addon_la_LDFLAGS = @TARGET_LDFLAGS@
 

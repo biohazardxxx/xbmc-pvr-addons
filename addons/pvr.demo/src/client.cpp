@@ -22,6 +22,7 @@
 #include "client.h"
 #include "xbmc_pvr_dll.h"
 #include "PVRDemoData.h"
+#include "TimeshiftBuffer.h"
 #include "platform/util/util.h"
 
 using namespace std;
@@ -227,7 +228,7 @@ bool OpenLiveStream(const PVR_CHANNEL &channel)
     if (m_data->GetChannel(channel, m_currentChannel))
     {
       if (strlen(channel.strStreamURL) > 0)
-        m_streamHandle = XBMC->OpenFile(channel.strStreamURL, 0);
+        m_streamHandle = new TimeshiftBuffer(channel.strStreamURL, "special://userdata/addon_data/pvr.demo");
 
       m_bIsPlaying = true;
       return true;
@@ -241,7 +242,7 @@ void CloseLiveStream(void)
 {
   m_bIsPlaying = false;
   if (m_streamHandle)
-    XBMC->CloseFile(m_streamHandle);
+    delete m_streamHandle;
   m_streamHandle = NULL;
 }
 
