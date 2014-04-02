@@ -35,6 +35,7 @@ bool           m_bCreated       = false;
 ADDON_STATUS   m_CurStatus      = ADDON_STATUS_UNKNOWN;
 PVRDemoData   *m_data           = NULL;
 bool           m_bIsPlaying     = false;
+void          *m_streamHandle   = NULL;
 PVRDemoChannel m_currentChannel;
 
 /* User adjustable settings are saved here.
@@ -76,7 +77,7 @@ ADDON_STATUS ADDON_Create(void* hdl, void* props)
     return ADDON_STATUS_PERMANENT_FAILURE;
   }
 
-  XBMC->Log(LOG_DEBUG, "%s - Creating the PVR demo add-on", __FUNCTION__);
+  XBMC->Log(LOG_DEBUG, "%s - Creating the PVR Seek add-on", __FUNCTION__);
 
   m_CurStatus     = ADDON_STATUS_UNKNOWN;
   g_strUserPath   = pvrprops->strUserPath;
@@ -170,7 +171,7 @@ PVR_ERROR GetAddonCapabilities(PVR_ADDON_CAPABILITIES* pCapabilities)
 
 const char *GetBackendName(void)
 {
-  static const char *strBackendName = "pulse-eight demo pvr add-on";
+  static const char *strBackendName = "seek-test pvr add-on";
   return strBackendName;
 }
 
@@ -225,6 +226,9 @@ bool OpenLiveStream(const PVR_CHANNEL &channel)
 
     if (m_data->GetChannel(channel, m_currentChannel))
     {
+      if (strlen(channel.strStreamURL) > 0)
+        m_streamHandle = XBMC->OpenFile(channel.strStreamURL, 0);
+
       m_bIsPlaying = true;
       return true;
     }
@@ -236,6 +240,9 @@ bool OpenLiveStream(const PVR_CHANNEL &channel)
 void CloseLiveStream(void)
 {
   m_bIsPlaying = false;
+  if (m_streamHandle)
+    XBMC->CloseFile(m_streamHandle);
+  m_streamHandle = NULL;
 }
 
 int GetCurrentClientChannel(void)
@@ -281,7 +288,7 @@ PVR_ERROR GetChannelGroupMembers(ADDON_HANDLE handle, const PVR_CHANNEL_GROUP &g
 
 PVR_ERROR SignalStatus(PVR_SIGNAL_STATUS &signalStatus)
 {
-  snprintf(signalStatus.strAdapterName, sizeof(signalStatus.strAdapterName), "pvr demo adapter 1");
+  snprintf(signalStatus.strAdapterName, sizeof(signalStatus.strAdapterName), "pvr seek-test adapter 1");
   snprintf(signalStatus.strAdapterStatus, sizeof(signalStatus.strAdapterStatus), "OK");
 
   return PVR_ERROR_NO_ERROR;
@@ -303,6 +310,37 @@ PVR_ERROR GetRecordings(ADDON_HANDLE handle)
   return PVR_ERROR_NOT_IMPLEMENTED;
 }
 
+bool CanSeekStream(void) { return true; }
+bool CanPauseStream(void) { return true; }
+
+int ReadLiveStream(unsigned char *pBuffer, unsigned int iBufferSize)
+{
+  if (m_streamHandle)
+    return XBMC->ReadFile(m_streamHandle, pBuffer, iBufferSize);
+  return 0;
+}
+
+long long SeekLiveStream(long long iPosition, int iWhence /* = SEEK_SET */)
+{
+  if (m_streamHandle)
+    return XBMC->SeekFile(m_streamHandle, iPosition, iWhence);
+  return -1;
+}
+
+long long PositionLiveStream(void)
+{
+  if (m_streamHandle)
+    return XBMC->GetFilePosition(m_streamHandle);
+  return -1;
+}
+
+long long LengthLiveStream(void)
+{
+  if (m_streamHandle)
+    return XBMC->GetFileLength(m_streamHandle);
+  return -1;
+}
+
 /** UNUSED API FUNCTIONS */
 PVR_ERROR DialogChannelScan(void) { return PVR_ERROR_NOT_IMPLEMENTED; }
 PVR_ERROR CallMenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item) { return PVR_ERROR_NOT_IMPLEMENTED; }
@@ -319,10 +357,6 @@ long long PositionRecordedStream(void) { return -1; }
 long long LengthRecordedStream(void) { return 0; }
 void DemuxReset(void) {}
 void DemuxFlush(void) {}
-int ReadLiveStream(unsigned char *pBuffer, unsigned int iBufferSize) { return 0; }
-long long SeekLiveStream(long long iPosition, int iWhence /* = SEEK_SET */) { return -1; }
-long long PositionLiveStream(void) { return -1; }
-long long LengthLiveStream(void) { return -1; }
 const char * GetLiveStreamURL(const PVR_CHANNEL &channel) { return ""; }
 PVR_ERROR DeleteRecording(const PVR_RECORDING &recording) { return PVR_ERROR_NOT_IMPLEMENTED; }
 PVR_ERROR RenameRecording(const PVR_RECORDING &recording) { return PVR_ERROR_NOT_IMPLEMENTED; }
@@ -339,8 +373,6 @@ void DemuxAbort(void) {}
 DemuxPacket* DemuxRead(void) { return NULL; }
 unsigned int GetChannelSwitchDelay(void) { return 0; }
 void PauseStream(bool bPaused) {}
-bool CanPauseStream(void) { return false; }
-bool CanSeekStream(void) { return false; }
 bool SeekTime(int,bool,double*) { return false; }
 void SetSpeed(int) {};
 time_t GetPlayingTime() { return 0; }
