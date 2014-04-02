@@ -111,16 +111,16 @@ WAIT:
   writePos = m_writePos;
   m_mutex.Unlock();
   //FIXME ugly hack
-  if (timeWaited > BUFFER_READ_TIMEOUT)
-  {
-    XBMC->Log(LOG_DEBUG, "Timeshift: Read timed out; waited %u", timeWaited);
-    return -1;
-  }
-
   if (readPos + size > writePos)
   {
     Sleep(BUFFER_READ_WAITTIME);
     timeWaited += BUFFER_READ_WAITTIME;
+    if (timeWaited > BUFFER_READ_TIMEOUT)
+    {
+      XBMC->Log(LOG_DEBUG, "Timeshift: Read timed out; waited %u", timeWaited);
+      return -1;
+    }
+
     goto WAIT;
   }
 
