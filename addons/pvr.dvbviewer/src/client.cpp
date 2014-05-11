@@ -256,55 +256,39 @@ PVR_ERROR GetDriveSpace(long long *iTotal, long long *iUsed)
   if (!DvbData || !DvbData->IsConnected())
     return PVR_ERROR_SERVER_ERROR;
 
-  return DvbData->GetDriveSpace(iTotal, iUsed);
+  *iTotal = 1024 * 1024 * 1024;
+  *iUsed  = 0;
+  return PVR_ERROR_NO_ERROR;
 }
 
 PVR_ERROR GetEPGForChannel(ADDON_HANDLE handle, const PVR_CHANNEL &channel, time_t iStart, time_t iEnd)
 {
-  if (!DvbData || !DvbData->IsConnected())
-    return PVR_ERROR_SERVER_ERROR;
-
-  return DvbData->GetEPGForChannel(handle, channel, iStart, iEnd);
+  return PVR_ERROR_SERVER_ERROR;
 }
 
 int GetChannelsAmount(void)
 {
-  if (!DvbData || !DvbData->IsConnected())
-    return 0;
-
-  return DvbData->GetChannelsAmount();
+  return 0;
 }
 
 PVR_ERROR GetChannels(ADDON_HANDLE handle, bool bRadio)
 {
-  if (!DvbData || !DvbData->IsConnected())
-    return PVR_ERROR_SERVER_ERROR;
-
-  return DvbData->GetChannels(handle, bRadio);
+  return PVR_ERROR_SERVER_ERROR;
 }
 
 int GetRecordingsAmount(void)
 {
-  if (!DvbData || !DvbData->IsConnected())
-    return PVR_ERROR_SERVER_ERROR;
-
-  return DvbData->GetRecordingsAmount();
+  return 0;
 }
 
 PVR_ERROR GetRecordings(ADDON_HANDLE handle)
 {
-  if (!DvbData || !DvbData->IsConnected())
-    return PVR_ERROR_SERVER_ERROR;
-
-  return DvbData->GetRecordings(handle);
+  return PVR_ERROR_SERVER_ERROR;
 }
 
 PVR_ERROR DeleteRecording(const PVR_RECORDING &recording)
 {
-  if (!DvbData || !DvbData->IsConnected())
-    return PVR_ERROR_SERVER_ERROR;
-
-  return DvbData->DeleteRecording(recording);
+  return PVR_ERROR_SERVER_ERROR;
 }
 
 PVR_ERROR RenameRecording(const PVR_RECORDING &_UNUSED(recording))
@@ -314,104 +298,66 @@ PVR_ERROR RenameRecording(const PVR_RECORDING &_UNUSED(recording))
 
 int GetTimersAmount(void)
 {
-  if (!DvbData || !DvbData->IsConnected())
     return 0;
-
-  return DvbData->GetTimersAmount();
 }
 
 PVR_ERROR GetTimers(ADDON_HANDLE handle)
 {
-  if (!DvbData || !DvbData->IsConnected())
-    return PVR_ERROR_SERVER_ERROR;
-
-  return DvbData->GetTimers(handle);
+  return PVR_ERROR_SERVER_ERROR;
 }
 
 PVR_ERROR AddTimer(const PVR_TIMER &timer)
 {
-  if (!DvbData || !DvbData->IsConnected())
-    return PVR_ERROR_SERVER_ERROR;
-
-  return DvbData->AddTimer(timer);
+  return PVR_ERROR_SERVER_ERROR;
 }
 
 PVR_ERROR DeleteTimer(const PVR_TIMER &timer, bool _UNUSED(bForceDelete))
 {
-  if (!DvbData || !DvbData->IsConnected())
-    return PVR_ERROR_SERVER_ERROR;
-
-  return DvbData->DeleteTimer(timer);
+  return PVR_ERROR_SERVER_ERROR;
 }
 
 PVR_ERROR UpdateTimer(const PVR_TIMER &timer)
 {
-  if (!DvbData || !DvbData->IsConnected())
-    return PVR_ERROR_SERVER_ERROR;
-
-  return DvbData->UpdateTimer(timer);
+  return PVR_ERROR_SERVER_ERROR;
 }
 
 int GetCurrentClientChannel(void)
 {
-  if (!DvbData || !DvbData->IsConnected())
-    return PVR_ERROR_SERVER_ERROR;
-
-  return DvbData->GetCurrentClientChannel();
+  return PVR_ERROR_SERVER_ERROR;
 }
 
 bool SwitchChannel(const PVR_CHANNEL &channel)
 {
-  if (!DvbData || !DvbData->IsConnected())
-    return false;
-
-  return DvbData->SwitchChannel(channel);
+  return false;
 }
 
 int GetChannelGroupsAmount(void)
 {
-  if (!DvbData || !DvbData->IsConnected())
-    return PVR_ERROR_SERVER_ERROR;
-
-  return DvbData->GetChannelGroupsAmount();
+  return 0;
 }
 
 PVR_ERROR GetChannelGroups(ADDON_HANDLE handle, bool bRadio)
 {
-  if (!DvbData || !DvbData->IsConnected())
-    return PVR_ERROR_SERVER_ERROR;
-
-  return DvbData->GetChannelGroups(handle, bRadio);
+  return PVR_ERROR_SERVER_ERROR;
 }
 
 PVR_ERROR GetChannelGroupMembers(ADDON_HANDLE handle, const PVR_CHANNEL_GROUP &group)
 {
-  if (!DvbData || !DvbData->IsConnected())
-    return PVR_ERROR_SERVER_ERROR;
-
-  return DvbData->GetChannelGroupMembers(handle, group);
+  return PVR_ERROR_SERVER_ERROR;
 }
 
 void CloseLiveStream(void)
 {
-  DvbData->CloseLiveStream();
 }
 
 bool OpenLiveStream(const PVR_CHANNEL &channel)
 {
-  if (!DvbData || !DvbData->IsConnected())
-    return false;
-
-  return DvbData->OpenLiveStream(channel);
+  return false;
 }
 
 const char *GetLiveStreamURL(const PVR_CHANNEL &channel)
 {
-  if (!DvbData || !DvbData->IsConnected())
-    return "";
-
-  DvbData->SwitchChannel(channel);
-  return DvbData->GetLiveStreamURL(channel).c_str();
+  return "";
 }
 
 bool CanPauseStream(void)
