@@ -4,7 +4,6 @@
 #define PVR_DVBVIEWER_DVBDATA_H
 
 #include "client.h"
-#include "TimeshiftBuffer.h"
 #include "platform/util/StdString.h"
 #include "platform/threads/threads.h"
 #include <list>
@@ -141,17 +140,6 @@ public:
 class DvbRecording
 {
 public:
-  enum Group
-  {
-    GroupDisabled = 0,
-    GroupByDirectory,
-    GroupByDate,
-    GroupByFirstLetter,
-    GroupByTVChannel,
-    GroupBySeries,
-  };
-
-public:
   DvbRecording()
     : genre(0)
   {}
@@ -209,7 +197,6 @@ public:
 
   bool OpenLiveStream(const PVR_CHANNEL& channelinfo);
   void CloseLiveStream();
-  TimeshiftBuffer *GetTimeshiftBuffer();
   CStdString& GetLiveStreamURL(const PVR_CHANNEL& channelinfo);
 
 protected:
@@ -244,7 +231,6 @@ private:
 
   long m_timezone;
   struct { long long total, used; } m_diskspace;
-  std::vector<CStdString> m_recfolders;
 
   CStdString m_url;
   unsigned int m_currentChannel;
@@ -260,7 +246,6 @@ private:
   bool m_updateTimers;
   bool m_updateEPG;
   unsigned int m_recordingAmount;
-  TimeshiftBuffer *m_tsBuffer;
 
   DvbTimers_t m_timers;
   unsigned int m_newTimerIndex;

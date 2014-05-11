@@ -60,20 +60,11 @@
 
 #define DEFAULT_HOST             "127.0.0.1"
 #define DEFAULT_WEB_PORT         8089
-#define DEFAULT_TSBUFFERPATH     "special://userdata/addon_data/pvr.dvbviewer"
 
 extern CStdString    g_hostname;
 extern int           g_webPort;
 extern CStdString    g_username;
 extern CStdString    g_password;
-extern bool          g_useFavourites;
-extern bool          g_useFavouritesFile;
-extern CStdString    g_favouritesFile;
-extern int           g_groupRecordings;
-extern bool          g_useTimeshift;
-extern CStdString    g_timeshiftBufferPath;
-extern bool          g_useRTSP;
-extern bool          g_lowPerformance;
 
 extern ADDON::CHelper_libXBMC_addon *XBMC;
 extern CHelper_libXBMC_pvr *PVR;

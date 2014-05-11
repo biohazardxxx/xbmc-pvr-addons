@@ -52,14 +52,11 @@ Dvb::Dvb()
 
   m_updateTimers = false;
   m_updateEPG    = false;
-  m_tsBuffer     = NULL;
 }
 
 Dvb::~Dvb()
 {
   StopThread();
-  if (m_tsBuffer)
-    SAFE_DELETE(m_tsBuffer);
 
   for (DvbChannels_t::iterator channel = m_channels.begin();
       channel != m_channels.end(); ++channel)
@@ -74,6 +71,7 @@ bool Dvb::Open()
   if (!m_connected)
     return false;
 
+#if 0
   if (!UpdateBackendStatus(true))
     return false;
 
@@ -83,6 +81,7 @@ bool Dvb::Open()
   TimerUpdates();
   // force recording sync as XBMC won't update recordings on PVR restart
   PVR->TriggerRecordingUpdate();
+#endif
 
   XBMC->Log(LOG_INFO, "Starting separate polling thread...");
   CreateThread();
@@ -154,18 +153,15 @@ PVR_ERROR Dvb::GetChannels(ADDON_HANDLE handle, bool bRadio)
     PVR_STRCPY(xbmcChannel.strChannelName, channel->name.c_str());
     PVR_STRCPY(xbmcChannel.strIconPath,    channel->logoURL.c_str());
 
-    if (!channel->radio && !g_useRTSP)
+    if (!channel->radio)
       PVR_STRCPY(xbmcChannel.strInputFormat, "video/x-mpegts");
     else
       PVR_STRCPY(xbmcChannel.strInputFormat, "");
 
-    if (!g_useTimeshift)
-    {
-      // self referencing so GetLiveStreamURL() gets triggered
-      CStdString streamURL;
-      streamURL.Format("pvr://stream/tv/%u.ts", channel->backendNr);
-      PVR_STRCPY(xbmcChannel.strStreamURL, streamURL.c_str());
-    }
+    // self referencing so GetLiveStreamURL() gets triggered
+    CStdString streamURL;
+    streamURL.Format("pvr://stream/tv/%u.ts", channel->backendNr);
+    PVR_STRCPY(xbmcChannel.strStreamURL, streamURL.c_str());
 
     PVR->TransferChannelEntry(handle, &xbmcChannel);
   }
@@ -416,7 +412,7 @@ PVR_ERROR Dvb::GetRecordings(ADDON_HANDLE handle)
     recording.streamURL = BuildExtURL(streamURL, "%s.ts", recording.id.c_str());
 
     CStdString thumbnail;
-    if (!g_lowPerformance && XMLUtils::GetString(xRecording, "image", thumbnail))
+    if (XMLUtils::GetString(xRecording, "image", thumbnail))
       recording.thumbnailPath = BuildExtURL(imageURL, "%s", thumbnail.c_str());
 
     CStdString startTime = xRecording->Attribute("start");
@@ -442,43 +438,6 @@ PVR_ERROR Dvb::GetRecordings(ADDON_HANDLE handle)
     tag.iDuration     = recording.duration;
     tag.iGenreType    = recording.genre & 0xF0;
     tag.iGenreSubType = recording.genre & 0x0F;
-
-    CStdString tmp;
-    switch(g_groupRecordings)
-    {
-      case DvbRecording::GroupByDirectory:
-        XMLUtils::GetString(xRecording, "file", tmp);
-        tmp.ToLower();
-        for (std::vector<CStdString>::reverse_iterator recf = m_recfolders.rbegin();
-            recf != m_recfolders.rend(); ++recf)
-        {
-          if (tmp.compare(0, recf->length(), *recf) != 0)
-            continue;
-          tmp = tmp.substr(recf->length(), tmp.ReverseFind('\\') - recf->length());
-          tmp.Replace('\\', '/');
-          PVR_STRCPY(tag.strDirectory, tmp.c_str() + 1);
-          break;
-        }
-        break;
-      case DvbRecording::GroupByDate:
-        tmp.Format("%s/%s", startTime.substr(0, 4), startTime.substr(4, 2));
-        PVR_STRCPY(tag.strDirectory, tmp.c_str());
-        break;
-      case DvbRecording::GroupByFirstLetter:
-        tag.strDirectory[0] = recording.title[0];
-        tag.strDirectory[1] = '\0';
-        break;
-      case DvbRecording::GroupByTVChannel:
-        PVR_STRCPY(tag.strDirectory, recording.channelName.c_str());
-        break;
-      case DvbRecording::GroupBySeries:
-        tmp = "Unknown";
-        XMLUtils::GetString(xRecording, "series", tmp);
-        PVR_STRCPY(tag.strDirectory, tmp.c_str());
-        break;
-      default:
-        break;
-    }
 
     PVR->TransferRecordingEntry(handle, &tag);
     ++m_recordingAmount;
@@ -522,28 +481,12 @@ bool Dvb::OpenLiveStream(const PVR_CHANNEL& channelinfo)
     return true;
 
   SwitchChannel(channelinfo);
-  if (!g_useTimeshift)
-    return true;
-
-  if (m_tsBuffer)
-    SAFE_DELETE(m_tsBuffer);
-
-  CStdString streamURL = GetLiveStreamURL(channelinfo);
-  XBMC->Log(LOG_INFO, "Timeshift starts; url=%s", streamURL.c_str());
-  m_tsBuffer = new TimeshiftBuffer(streamURL, g_timeshiftBufferPath);
-  return m_tsBuffer->IsValid();
+  return true;
 }
 
 void Dvb::CloseLiveStream(void)
 {
   m_currentChannel = 0;
-  if (m_tsBuffer)
-    SAFE_DELETE(m_tsBuffer);
-}
-
-TimeshiftBuffer *Dvb::GetTimeshiftBuffer()
-{
-  return m_tsBuffer;
 }
 
 CStdString& Dvb::GetLiveStreamURL(const PVR_CHANNEL& channelinfo)
@@ -562,6 +505,7 @@ void *Dvb::Process()
     Sleep(1000);
     ++updateTimer;
 
+#if 0
     if (m_updateEPG)
     {
       Sleep(8000); /* Sleep enough time to let the recording service grab the EPG data */
@@ -585,6 +529,7 @@ void *Dvb::Process()
       TimerUpdates();
       PVR->TriggerRecordingUpdate();
     }
+#endif
   }
 
   CLockObject lock(m_mutex);
@@ -651,7 +596,7 @@ bool Dvb::LoadChannels()
   TiXmlElement *root = doc.RootElement();
 
   CStdString streamURL;
-  XMLUtils::GetString(root, (g_useRTSP) ? "rtspURL" : "upnpURL", streamURL);
+  XMLUtils::GetString(root, "upnpURL", streamURL);
 
   m_channels.clear();
   m_channelAmount = 0;
@@ -667,7 +612,7 @@ bool Dvb::LoadChannels()
       m_groups.push_back(DvbGroup());
       DvbGroup *group = &m_groups.back();
       group->name     = xGroup->Attribute("name");
-      group->hidden   = g_useFavourites;
+      group->hidden   = false;
       group->radio    = true;
       if (!group->hidden)
         ++m_groupAmount;
@@ -681,8 +626,8 @@ bool Dvb::LoadChannels()
         channel->radio      = !(flags & VIDEO_FLAG);
         channel->encrypted  = (flags & ENCRYPTED_FLAG);
         channel->name       = xChannel->Attribute("name");
-        channel->hidden     = g_useFavourites;
-        channel->frontendNr = (!g_useFavourites) ? m_channels.size() + 1 : 0;
+        channel->hidden     = false;
+        channel->frontendNr = m_channels.size() + 1;
         xChannel->QueryUnsignedAttribute("nr", &channel->backendNr);
         xChannel->QueryValueAttribute<uint64_t>("EPGID", &channel->epgId);
 
@@ -691,17 +636,10 @@ bool Dvb::LoadChannels()
         channel->backendIds.push_back(backendId);
 
         CStdString logoURL;
-        if (!g_lowPerformance && XMLUtils::GetString(xChannel, "logo", logoURL))
+        if (XMLUtils::GetString(xChannel, "logo", logoURL))
           channel->logoURL = BuildURL("%s", logoURL.c_str());
 
-        if (g_useRTSP)
-        {
-          CStdString urlParams;
-          XMLUtils::GetString(xChannel, "rtsp", urlParams);
-          channel->streamURL = BuildExtURL(streamURL, "%s", urlParams.c_str());
-        }
-        else
-          channel->streamURL = BuildExtURL(streamURL, "%u.ts", channel->backendNr);
+        channel->streamURL = BuildExtURL(streamURL, "%u.ts", channel->backendNr);
 
         for (TiXmlElement* xSubChannel = xChannel->FirstChildElement("subchannel");
             xSubChannel; xSubChannel = xSubChannel->NextSiblingElement("subchannel"))
@@ -722,130 +660,6 @@ bool Dvb::LoadChannels()
         if (!channel->radio)
           group->radio = false;
       }
-    }
-  }
-
-  if (g_useFavourites)
-  {
-    CStdString url = BuildURL("api/getfavourites.html");
-    if (g_useFavouritesFile)
-    {
-      if (!XBMC->FileExists(g_favouritesFile, false))
-      {
-        XBMC->Log(LOG_ERROR, "Unable to open local favourites.xml");
-        XBMC->QueueNotification(QUEUE_ERROR, XBMC->GetLocalizedString(30504));
-        return false;
-      }
-      url = g_favouritesFile;
-    }
-
-    CStdString req = GetHttpXML(url);
-    RemoveNullChars(req);
-
-    TiXmlDocument doc;
-    doc.Parse(req);
-    if (doc.Error())
-    {
-      XBMC->Log(LOG_ERROR, "Unable to parse favourites.xml. Error: %s",
-          doc.ErrorDesc());
-      XBMC->QueueNotification(QUEUE_ERROR, XBMC->GetLocalizedString(30505));
-      XBMC->QueueNotification(QUEUE_ERROR, XBMC->GetLocalizedString(30503));
-      return false;
-    }
-
-    m_groups.clear();
-    m_groupAmount = 0;
-
-    /* example data:
-     * <settings>
-     *    <section name="0">
-     *      <entry name="Header">Group 1</entry>
-     *      <entry name="0">1234567890123456789|Channel 1</entry>
-     *      <entry name="1">1234567890123456789|Channel 2</entry>
-     *    </section>
-     *   <section name="1">
-     *     <entry name="Header">1234567890123456789|Channel 3</entry>
-     *    </section>
-     *    ...
-     *  </settings>
-     */
-    for (TiXmlElement *xSection = doc.RootElement()->FirstChildElement("section");
-        xSection; xSection = xSection->NextSiblingElement("section"))
-    {
-      DvbGroup *group = NULL;
-      for (TiXmlElement *xEntry = xSection->FirstChildElement("entry");
-          xEntry; xEntry = xEntry->NextSiblingElement("entry"))
-      {
-        // name="Header" doesn't indicate a group alone. we must have at least
-        // one additional child. see example above
-        if (!group && CStdString(xEntry->Attribute("name")) == "Header"
-            && xEntry->NextSiblingElement("entry"))
-        {
-          m_groups.push_back(DvbGroup());
-          group = &m_groups.back();
-          group->name   = ConvertToUtf8(xEntry->GetText());
-          group->hidden = false;
-          group->radio  = false;
-          ++m_groupAmount;
-          continue;
-        }
-
-        uint64_t backendId = 0;
-        std::istringstream ss(xEntry->GetText());
-        ss >> backendId;
-        if (!backendId)
-          continue;
-
-        for (DvbChannels_t::iterator it = m_channels.begin();
-            it != m_channels.end(); ++it)
-        {
-          DvbChannel *channel = *it;
-          bool found = false;
-
-          for (std::list<uint64_t>::iterator it2 = channel->backendIds.begin();
-              it2 != channel->backendIds.end(); ++it2)
-          {
-            /* legacy support for old 32bit channel ids */
-            uint64_t channelId = (backendId > 0xFFFFFFFF) ? *it2 :
-              *it2 & 0xFFFFFFFF;
-            if (channelId == backendId)
-            {
-              found = true;
-              break;
-            }
-          }
-
-          if (found)
-          {
-            channel->hidden = false;
-            channel->frontendNr = ++m_channelAmount;
-            if (!ss.eof())
-            {
-              ss.ignore(1);
-              CStdString channelName;
-              getline(ss, channelName);
-              channel->name = ConvertToUtf8(channelName);
-            }
-
-            if (group)
-            {
-              group->channels.push_back(channel);
-              if (!channel->radio)
-                group->radio = false;
-            }
-            break;
-          }
-        }
-      }
-    }
-
-    // assign channel number to remaining channels
-    unsigned int channelNumber = m_channelAmount;
-    for (DvbChannels_t::iterator it = m_channels.begin();
-        it != m_channels.end(); ++it)
-    {
-      if (!(*it)->frontendNr)
-        (*it)->frontendNr = ++channelNumber;
     }
   }
 
@@ -1086,7 +900,8 @@ void Dvb::RemoveNullChars(CStdString& str)
 
 bool Dvb::CheckBackendVersion()
 {
-  CStdString url = BuildURL("api/version.html");
+  //CStdString url = BuildURL("api/version.html");
+  CStdString url("http://edy:edy@192.168.178.28:8089/api/version.html");
   CStdString req = GetHttpXML(url);
 
   TiXmlDocument doc;
@@ -1122,18 +937,15 @@ bool Dvb::CheckBackendVersion()
   return true;
 }
 
-static bool StringGreaterThan(const CStdString& a, const CStdString& b)
-{
-  return (a.length() < b.length());
-}
-
 bool Dvb::UpdateBackendStatus(bool updateSettings)
 {
   CStdString url = BuildURL("api/status.html");
   CStdString req = GetHttpXML(url);
 
   TiXmlDocument doc;
+  XBMC->Log(LOG_DEBUG, "VOR Parse: errorid=%d error=%d", doc.ErrorId(), doc.Error());
   doc.Parse(req);
+  XBMC->Log(LOG_DEBUG, "NACH Parse: errorid=%d error=%d", doc.ErrorId(), doc.Error());
   if (doc.Error())
   {
     XBMC->Log(LOG_ERROR, "Unable to get backend status. Error: %s",
@@ -1149,8 +961,6 @@ bool Dvb::UpdateBackendStatus(bool updateSettings)
     //if (XMLUtils::GetLong(root, "timezone", m_timezone))
     //  m_timezone *= 60;
     m_timezone = GetGMTOffset();
-
-    m_recfolders.clear();
   }
 
   // compute disk space. duplicates are detected by their identical values
@@ -1170,13 +980,7 @@ bool Dvb::UpdateBackendStatus(bool updateSettings)
       m_diskspace.total += size / 1024;
       m_diskspace.used += (size - free) / 1024;
     }
-
-    if (updateSettings && g_groupRecordings != DvbRecording::GroupDisabled)
-      m_recfolders.push_back(CStdString(xFolder->GetText()).ToLower());
   }
-
-  if (updateSettings && g_groupRecordings != DvbRecording::GroupDisabled)
-    std::sort(m_recfolders.begin(), m_recfolders.end(), StringGreaterThan);
 
   return true;
 }
