@@ -905,7 +905,9 @@ bool Dvb::CheckBackendVersion()
   CStdString req = GetHttpXML(url);
 
   TiXmlDocument doc;
+  XBMC->Log(LOG_DEBUG, "VOR Parse: errorid=%d error=%d", doc.ErrorId(), doc.Error());
   doc.Parse(req);
+  XBMC->Log(LOG_DEBUG, "NACH Parse: errorid=%d error=%d", doc.ErrorId(), doc.Error());
   if (doc.Error())
   {
     XBMC->Log(LOG_ERROR, "Unable to connect to the backend service. Error: %s",
@@ -943,9 +945,7 @@ bool Dvb::UpdateBackendStatus(bool updateSettings)
   CStdString req = GetHttpXML(url);
 
   TiXmlDocument doc;
-  XBMC->Log(LOG_DEBUG, "VOR Parse: errorid=%d error=%d", doc.ErrorId(), doc.Error());
   doc.Parse(req);
-  XBMC->Log(LOG_DEBUG, "NACH Parse: errorid=%d error=%d", doc.ErrorId(), doc.Error());
   if (doc.Error())
   {
     XBMC->Log(LOG_ERROR, "Unable to get backend status. Error: %s",
